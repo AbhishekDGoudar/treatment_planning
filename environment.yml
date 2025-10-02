@@ -1,0 +1,32 @@
+name: multimodalrag
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11  # Or >=3.10, but pick a specific version for reproducibility
+  - pip
+  - django>=5.0
+  - djangorestframework>=3.15
+  - django-cors-headers>=4.4
+  - pydantic>=2.8
+  - numpy>=1.26
+  - scipy>=1.11
+  - pillow>=10.4
+  - tqdm>=4.66
+  - opencv-python-headless>=4.10
+  - pytesseract>=0.3.13
+  - python-dotenv>=1.0
+  - py-mupdf>=1.24  # pymupdf on PyPI, py-mupdf on conda
+  - regex>=2024.7.24
+  - python-magic>=0.4.27
+  - torch>=2.3
+  - pip:
+      - neo4j~=5.28
+      - faiss-cpu>=1.8.0
+      - uvicorn>=0.30
+      - fastapi>=0.115
+      - mlx-lm>=0.27
+      - mlx-vlm>=0.0.11
+      - mlx>=0.29
+      - transformers>=4.44
+      - tokenizers>=0.19
