@@ -3,7 +3,7 @@ import fitz  # PyMuPDF
 from PIL import Image
 import io
 
-from core.models import Document, Chunk, ImageAsset
+from core.models import WaiverDocument, Chunk, ImageAsset
 
 TEXT_EXT = {".txt", ".md"}
 DOC_EXT = {".pdf"}
@@ -24,7 +24,7 @@ def load_path(path: str):
 
 def _register_file(f: Path):
     doc_type = "text" if f.suffix.lower() in TEXT_EXT else ("pdf" if f.suffix.lower() in DOC_EXT else "image")
-    d, _ = Document.objects.get_or_create(path=str(f), defaults={"doc_type": doc_type})
+    d, _ = WaiverDocument.objects.get_or_create(path=str(f), defaults={"doc_type": doc_type})
     if doc_type == "text":
         text = f.read_text(errors="ignore")
         Chunk.objects.create(document=d, text=text, order=0)

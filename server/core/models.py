@@ -17,15 +17,21 @@ US_STATES = [
 ]
 
 POLICY_TYPES = [
-    ("POLICY", "Policy"),
+    ("RENEWAL", "Renewal"),
     ("AMENDMENT", "Amendment"),
+    ("NEW", "New"),
 ]
 
-class Document(models.Model):
-    path = models.TextField(unique=True)
-    doc_type = models.CharField(max_length=32, default="text")
+class WaiverDocument(models.Model):
+    file_path = models.FileField(upload_to='uploads/')
+    uploaded_on = models.DateTimeField(auto_now_add=True)
+
     year = models.IntegerField(null=True, blank=True)
-    group = models.CharField(max_length=128, null=True, blank=True)
+    application_number = models.CharField(max_length=256, null=True, blank=True)
+    program_title = models.TextField(null=True, blank=True)
+    proposed_effective_date = models.DateField(null=True, blank=True)
+    approved_effective_date = models.DateField(null=True, blank=True)
+    amended_effective_date = models.DateField(null=True, blank=True)
     state = models.CharField(
         max_length=2,
         choices=US_STATES,
@@ -33,17 +39,18 @@ class Document(models.Model):
         blank=True,
         help_text="U.S. state (2-letter code)"
     )
-    policy_type = models.CharField(
-        max_length=16,
+    application_type = models.CharField(
+        max_length=32,
         choices=POLICY_TYPES,
         default="POLICY",
         help_text="Is this a policy or an amendment?"
     )
     extra = models.JSONField(default=dict)
-    created_at = models.DateTimeField(auto_now_add=True)
+
+
 
 class Chunk(models.Model):
-    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="chunks")
+    document = models.ForeignKey(WaiverDocument, on_delete=models.CASCADE, related_name="chunks")
     text = models.TextField()
     page = models.IntegerField(null=True, blank=True)
     order = models.IntegerField(default=0)
@@ -54,11 +61,11 @@ class Embedding(models.Model):
     kind = models.CharField(max_length=16)  # text | image
     vector_id = models.BigIntegerField()
     chunk = models.ForeignKey(Chunk, null=True, blank=True, on_delete=models.SET_NULL)
-    document = models.ForeignKey(Document, on_delete=models.CASCADE)
+    document = models.ForeignKey(WaiverDocument, on_delete=models.CASCADE)
     score = models.FloatField(default=0.0)
 
 class ImageAsset(models.Model):
-    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="images")
+    document = models.ForeignKey(WaiverDocument, on_delete=models.CASCADE, related_name="images")
     path = models.TextField()
     page = models.IntegerField(null=True, blank=True)
     caption = models.TextField(blank=True, default="")

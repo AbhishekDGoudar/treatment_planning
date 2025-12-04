@@ -6,6 +6,10 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret")
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
+DATA_ROOT = os.path.join(Path(__file__).resolve().parent.parent.parent) + "/Data"
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -57,7 +61,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
-NEO4J_PASS = os.getenv("NEO4J_PASS", "abhishek")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "abhishek")
+NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
 
 MLX_TEXT_MODEL = os.getenv("MLX_TEXT_MODEL", "mlx-community/Meta-Llama-3-8B-Instruct-4bit")
 MLX_VLM_MODEL = os.getenv("MLX_VLM_MODEL", "mlx-community/Qwen2-VL-2B-4bit")

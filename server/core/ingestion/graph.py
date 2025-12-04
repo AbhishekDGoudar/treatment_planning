@@ -10,7 +10,7 @@ CREATE CONSTRAINT group_val IF NOT EXISTS FOR (g:Group) REQUIRE g.name IS UNIQUE
 
 class Graph:
     def __init__(self):
-        self.driver = GraphDatabase.driver(settings.NEO4J_URI, auth=(settings.NEO4J_USER, settings.NEO4J_PASS))
+        self.driver = GraphDatabase.driver(settings.NEO4J_URI, auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD))
         with self.driver.session() as s:
             for stmt in SCHEMA.split(";"):
                 if stmt.strip():
@@ -18,7 +18,7 @@ class Graph:
 
     def upsert_doc(self, path: str, year: int | None, group: str | None, state: str | None):
         cypher = '''
-        MERGE (d:Document {path:$path})
+        MERGE (d:WaiverDocument {path:$path})
         WITH d
         FOREACH (_ IN CASE WHEN $year IS NULL THEN [] ELSE [1] END |
             MERGE (y:Year {value:$year}) MERGE (d)-[:HAS_YEAR]->(y))
@@ -33,7 +33,7 @@ class Graph:
 
     def subgraph_for_docs(self, paths: list[str]):
         cypher = '''
-        MATCH (d:Document)
+        MATCH (d:WaiverDocument)
         WHERE d.path IN $paths
         OPTIONAL MATCH (d)-[r]-(n)
         RETURN d, r, n

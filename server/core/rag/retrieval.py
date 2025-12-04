@@ -1,7 +1,7 @@
 from pathlib import Path
 import numpy as np
 import faiss
-from core.models import Document, Chunk, Embedding
+from core.models import WaiverDocument, Chunk, Embedding
 
 TEXT_FAISS = Path("faiss_text.index")
 IMG_FAISS = Path("faiss_image.index")

@@ -51,17 +51,17 @@ python manage.py shell
 from core.ingestion.loaders import load_path
 from core.ingestion.embeddings import index_corpus
 from core.ingestion.graph import Graph
-from core.models import Document
+from core.models import WaiverDocument
 
 load_path("/path/to/your/corpus")
 
 # Optionally tag metadata
-# Document.objects.filter(path__endswith="report2022.pdf").update(year=2022, group="A", state="TX")
+# WaiverDocument.objects.filter(path__endswith="report2022.pdf").update(year=2022, group="A", state="TX")
 
 index_corpus()
 
 G = Graph()
-for d in Document.objects.all():
+for d in WaiverDocument.objects.all():
     G.upsert_doc(d.path, d.year, d.group, d.state)
 ```
 
