@@ -8,6 +8,7 @@ ALLOWED_HOSTS = ["*"]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
+LANCE_DB_PATH = os.path.join(BASE_DIR, 'lancedb')
 DATA_ROOT = os.path.join(Path(__file__).resolve().parent.parent.parent) + "/Data"
 
 INSTALLED_APPS = [
@@ -64,5 +65,9 @@ NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "abhishek")
 NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
 
-MLX_TEXT_MODEL = os.getenv("MLX_TEXT_MODEL", "mlx-community/Meta-Llama-3-8B-Instruct-4bit")
-MLX_VLM_MODEL = os.getenv("MLX_VLM_MODEL", "mlx-community/Qwen2-VL-2B-4bit")
+# --- MODEL CONFIGURATION ---
+# For Ollama: Use llama3.2 and nomic-embed-text
+# For OpenAI: Use gpt-4o-mini and text-embedding-3-small
+AI_PROVIDER = os.getenv("AI_PROVIDER", "OLLAMA")
+OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "bge-m3")
+OLLAMA_LLM_MODEL = os.getenv("OLLAMA_LLM_MODEL", "qwen3:8b")

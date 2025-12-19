@@ -22,8 +22,28 @@ POLICY_TYPES = [
     ("NEW", "New"),
 ]
 
+import os
+from django.utils.text import slugify
+
+def waiver_upload_path(instance, filename):
+    """
+    Constructs: uploads/<STATE>/<WAIVER_NUMBER>_<DATE>.pdf
+    Example: uploads/AL/al-0123-r01_2025-01-01.pdf
+    """
+    state_folder = instance.state if instance.state else "unknown_state"
+
+    waiver_name = slugify(instance.application_number) if instance.application_number else "unknown_waiver"
+    
+    waiver_date = instance.approved_effective_date.strftime('%Y-%m-%d') if instance.approved_effective_date else "no_date"
+    
+    ext = filename.split('.')[-1]
+    new_filename = f"{waiver_name}_{waiver_date}.{ext}"
+    new_filename = new_filename.upper()
+
+    return os.path.join(state_folder, new_filename)
+
 class WaiverDocument(models.Model):
-    file_path = models.FileField(upload_to='uploads/')
+    file_path = models.FileField(upload_to=waiver_upload_path)
     uploaded_on = models.DateTimeField(auto_now_add=True)
 
     year = models.IntegerField(null=True, blank=True)

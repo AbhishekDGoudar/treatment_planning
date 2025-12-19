@@ -1,21 +1,30 @@
-from typing import List
 from dataclasses import dataclass
-from mlx_lm import load as mlx_load, generate as mlx_generate
+from django.conf import settings
+
+from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
+
 
 @dataclass
 class PromptPiece:
     role: str
     content: str
 
-SYSTEM = (
-    "You answer using only the given context. "
-    "Return a concise rationale (2-3 bullets) and numbered sources with file paths and page numbers."
-)
 
-class LLM:
-    def __init__(self, model_id: str):
-        self.model, self.tokenizer = mlx_load(model_id)
+class GeneratorFactory:
+    def __init__(self):
+        if settings.AI_PROVIDER.upper() == "OPENAI":
+            self.llm = ChatOpenAI(
+                model=settings.OPENAI_LLM_MODEL,
+                temperature=0
+            )
+        else:
+            self.llm = ChatOllama(
+                model=settings.OLLAMA_LLM_MODEL,
+                temperature=0
+            )
 
-    def answer(self, pieces: List[PromptPiece], max_tokens: int = 512) -> str:
-        prompt = "\n\n".join([f"{p.role.upper()}: {p.content}" for p in pieces])
-        return mlx_generate(self.model, self.tokenizer, prompt=prompt, max_tokens=max_tokens)
+    def generate(self, pieces: list[PromptPiece]) -> str:
+        messages = [(p.role, p.content) for p in pieces]
+        response = self.llm.invoke(messages)
+        return response.content.strip()

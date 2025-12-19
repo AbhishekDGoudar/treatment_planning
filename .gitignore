@@ -21,6 +21,7 @@ coverage/
 *.tsbuildinfo
 
 # === Django (backend) ===
+server/lancedb/*
 *.pyc
 __pycache__/
 db.sqlite3

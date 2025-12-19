@@ -8,7 +8,7 @@ from django.core.files.base import ContentFile
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.conf import settings
-from core.rag.pipeline import Pipeline
+from core.rag.pipeline import GraphRAGPipeline
 from core.models import WaiverDocument
 from ..serializers import WaiverDocumentSerializer
 from core.utils import extract_waiver_info
@@ -29,13 +29,14 @@ def save_uploaded_file(uploaded_file):
 
     return full_path, save_path
 
-pipe = Pipeline(settings.MLX_TEXT_MODEL)
 
+pipe = GraphRAGPipeline()
 @api_view(["POST"])
 def ask(request):
     q = request.data.get("query", "")
     filters = request.data.get("filters")
-    res = pipe.ask(q, filters)
+    res = pipe.ask(q)
+    import pdb; pdb.set_trace()
     return Response({
         "answer": res.answer,
         "sources": res.sources,

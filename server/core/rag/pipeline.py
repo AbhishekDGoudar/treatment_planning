@@ -1,45 +1,60 @@
-from dataclasses import dataclass
-from typing import Optional
-import numpy as np
-from core.ingestion.embeddings import embed_text_batch
-from core.rag.retrieval import search_text
-from core.rag.generator import LLM, PromptPiece, SYSTEM
-from core.ingestion.graph import Graph
+import json
 
-@dataclass
-class RAGResult:
-    answer: str
-    sources: list[dict]
-    graph: list[dict]
+from .retriever import GraphRetriever
+from .generator import GeneratorFactory, PromptPiece
 
-class Pipeline:
-    def __init__(self, text_model_id: str):
-        self.llm = LLM(text_model_id)
-        self.graph = Graph()
 
-    def ask(self, query: str, filters: Optional[dict] = None) -> RAGResult:
-        qvec = embed_text_batch([query])
-        hits = search_text(qvec, k=6)
-        if filters:
-            y = filters.get("year"); s = filters.get("state"); g = filters.get("group")
-            hits = [h for h in hits if (y is None or h["document"].year == y)
-                                 and (s is None or h["document"].state == s)
-                                 and (g is None or h["document"].group == g)]
-        ctx_lines, src_meta = [], []
-        for i, h in enumerate(hits[:5], 1):
-            c = h["chunk"]
-            ctx_lines.append(f"[#{i}] {c.text[:1200]}")
-            src_meta.append({
-                "rank": i,
-                "path": h["document"].path,
-                "page": c.page,
-                "score": round(h["score"], 4)
-            })
-        context = "\n\n".join(ctx_lines) or "(no context)"
-        pieces = [
-            PromptPiece("system", SYSTEM),
-            PromptPiece("user", f"Question: {query}\n\nContext:\n{context}\n\nAnswer:")
-        ]
-        answer = self.llm.answer(pieces)
-        sub = self.graph.subgraph_for_docs(paths=[m["path"] for m in src_meta])
-        return RAGResult(answer=answer, sources=src_meta, graph=sub)
+class GraphRAGPipeline:
+    def __init__(self):
+        self.retriever = GraphRetriever()
+        self.generator = GeneratorFactory()
+
+    def ask(self, query: str) -> dict:
+        # 1️⃣ Embed once
+        query_vec = self.retriever.embed_query(query)
+
+        # 2️⃣ Retrieve evidence subgraph
+        graph = self.retriever.retrieve_graph(query_vec)
+
+        # 3️⃣ Build strict prompt
+        prompt = [
+            PromptPiece(
+                role="system",
+                content=(
+            "You are a Graph-based Question Answering system.\n\n"
+            "The provided data is a VERIFIED EVIDENCE GRAPH with the guaranteed structure:\n"
+            "Country → State → Waiver Application → Themes.\n\n"
+            "IMPORTANT CONSTRAINTS:\n"
+            "1. Use ONLY facts explicitly present in the graph.\n"
+            "2. Do NOT assume or infer missing information.\n"
+            "3. Each waiver belongs to exactly one state and country.\n"
+            "4. If requested information is missing, say so clearly.\n\n"
+            "REASONING:\n"
+            "- Identify relevant waiver nodes.\n"
+            "- Use only directly connected nodes.\n"
+            "- Do not merge facts unless explicitly asked.\n\n"
+            "ANSWER FORMAT:\n"
+            "- Concise, factual English.\n"
+            "- Exact entity names from the graph.\n"
+            "- Explicitly state if the graph lacks the answer.\n"
+            )
+        ),
+        PromptPiece(
+            role="user",
+            content=f"""
+                Graph Data (JSON):
+                {json.dumps(graph, indent=2)}
+
+                Question:
+                {query}
+                """
+                    )
+                ]
+
+        # 4️⃣ Generate grounded answer
+        answer = self.generator.generate(prompt)
+
+        return {
+            "answer": answer,
+            "graph": graph
+        }
