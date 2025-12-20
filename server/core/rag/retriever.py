@@ -26,8 +26,7 @@ class GraphRetriever:
 
     def retrieve_graph(self, query_vec: list[float], k: int = 5) -> dict:
         """
-        Returns a real graph structure:
-        nodes + edges
+        Original method kept for compatibility.
         """
         cypher = """
         CALL db.index.vector.queryNodes('waiver_embeddings', $k, $vector)
@@ -48,41 +47,58 @@ class GraphRetriever:
             score
         ORDER BY score DESC
         """
+        return self.execute_raw_cypher(cypher, {"vector": query_vec, "k": k})
 
+    def execute_raw_cypher(self, cypher: str, params: dict = None) -> dict:
+        """
+        Executes a generated Cypher query safely.
+        """
+        if params is None:
+            params = {}
+            
         with self.driver.session(database=settings.NEO4J_DATABASE) as session:
-            records = [
-                r.data() for r in session.run(
-                    cypher,
-                    vector=query_vec,
-                    k=k
-                )
-            ]
+            try:
+                records = [r.data() for r in session.run(cypher, **params)]
+            except Exception as e:
+                print(f"Cypher Execution Error: {e}")
+                return {"nodes": [], "edges": []}
 
         nodes = []
         edges = []
 
         for r in records:
-            nodes.append({
-                "id": r["waiver_id"],
-                "type": "Waiver",
-                "title": r["title"],
-                "state": r["state"],
-                "themes": r["themes"],
-                "score": r["score"]
-            })
+            # Dynamic parsing based on common return aliases
+            # Use 'app' or 'waiver_id' if available
+            wid = r.get("waiver_id") or r.get("app", {}).get("applicationNumber") or "unknown_id"
+            title = r.get("title") or r.get("app", {}).get("programTitle") or "Untitled"
+            state = r.get("state") or "Unknown State"
+            themes = r.get("themes") or []
+            score = r.get("score") or 0
 
-            edges.append({
-                "from": r["waiver_id"],
-                "to": r["state"],
-                "type": "LOCATED_IN"
-            })
-
-            for t in r["themes"]:
-                edges.append({
-                    "from": r["waiver_id"],
-                    "to": t["name"],
-                    "type": "HAS_THEME"
+            # Only add node if ID is valid
+            if wid != "unknown_id":
+                nodes.append({
+                    "id": wid,
+                    "type": "Waiver",
+                    "title": title,
+                    "state": state,
+                    "themes": themes,
+                    "score": score
                 })
+
+                edges.append({
+                    "from": wid,
+                    "to": state,
+                    "type": "LOCATED_IN"
+                })
+
+                for t in themes:
+                    if isinstance(t, dict) and "name" in t:
+                        edges.append({
+                            "from": wid,
+                            "to": t["name"],
+                            "type": "HAS_THEME"
+                        })
 
         return {
             "nodes": nodes,

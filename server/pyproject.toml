@@ -17,20 +17,14 @@ dependencies = [
     "scipy>=1.11",
     "pillow>=10.4",
     "tqdm>=4.66",
-    "opencv-python-headless>=4.10",
     "pytesseract>=0.3.13",
     "python-dotenv>=1.0",
     "PyMuPDF>=1.24",
     "regex>=2024.7.24",
     "python-magic>=0.4.27",
-    "torch>=2.3",
     "neo4j~=5.28",
-    "faiss-cpu>=1.8.0",
     "uvicorn>=0.30",
     "fastapi>=0.115",
-    "mlx-lm>=0.27",
-    "mlx-vlm>=0.0.11",
-    "mlx>=0.29",
     "transformers>=4.44",
     "tokenizers>=0.19",
     "fits>=0.0.1",
@@ -41,6 +35,7 @@ dependencies = [
     "langchain-community>=0.4.1",
     "langchain>=1.2.0",
     "langchain-core>=1.2.2",
+    "langgraph>=1.0.5",
 ]
 
 [tool.setuptools.packages.find]

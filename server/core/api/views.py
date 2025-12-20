@@ -15,6 +15,42 @@ from core.utils import extract_waiver_info
 from rest_framework.generics import ListAPIView
 from django.utils.text import get_valid_filename
 
+
+pipe = GraphRAGPipeline()
+
+@api_view(["POST"])
+def plan_query(request):
+    """Stage 1: Analyze user query and return a plan."""
+    query = request.data.get("query", "")
+    if not query:
+        return Response({"error": "Query is required"}, status=400)
+        
+    result = pipe.plan(query)
+    
+    return Response({
+        "plan": result["execution_plan"],
+        "cypher_query": result["cypher_query"],
+        "filters": result["filters"],
+        "is_safe": result["is_safe"],
+        "error": result.get("error")
+    })
+
+@api_view(["POST"])
+def execute_query(request):
+    """Stage 2: Execute the confirmed plan."""
+    cypher = request.data.get("cypher", "")
+    question = request.data.get("question", "")
+    
+    if not cypher:
+        return Response({"error": "Cypher query is required"}, status=400)
+        
+    result = pipe.execute(cypher, question)
+    
+    return Response({
+        "answer": result["answer"],
+        "graph": result["graph_data"]
+    })
+
 def save_uploaded_file(uploaded_file):
     # Sanitize filename
     safe_name = get_valid_filename(uploaded_file.name)
