@@ -51,38 +51,67 @@ def execute_query(request):
         "graph": result["graph_data"]
     })
 
+@api_view(["POST"])
+def ask(request):
+    """
+    Unified endpoint for 'Run Query' button.
+    Chains Plan -> Execute automatically.
+    """
+    q = request.data.get("query", "")
+    filters = request.data.get("filters")
+    
+    if not q:
+        return Response({"error": "Query is required"}, status=400)
+
+    # Step 1: Generate Plan
+    # Note: If you want to use 'filters' from the UI, you need to update pipe.plan to accept them.
+    # For now, we rely on the LLM extracting filters from the query string.
+    plan_result = pipe.plan(q)
+    
+    if not plan_result.get("is_safe", True):
+        return Response({
+            "answer": "Query rejected for safety reasons.",
+            "sources": [],
+            "graph": [],
+            "error": plan_result.get("error")
+        })
+
+    # Step 2: Execute Plan
+    cypher = plan_result.get("cypher_query", "")
+    if not cypher:
+         return Response({
+            "answer": "Could not generate a valid search query.",
+            "sources": [],
+            "graph": []
+        })
+
+    exec_result = pipe.execute(cypher, q)
+    
+    # Step 3: Format Response for Frontend
+    # Frontend expects: { answer, sources, graph }
+    return Response({
+        "answer": exec_result.get("answer", ""),
+        # Map graph nodes to sources list if needed, or send empty list to prevent crash
+        "sources": [], 
+        "graph": exec_result.get("graph_data", {}),
+    })
+
 def save_uploaded_file(uploaded_file):
     # Sanitize filename
     safe_name = get_valid_filename(uploaded_file.name)
-    # Optional: add timestamp or UUID to avoid collisions
     timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
     final_name = f"{timestamp}_{safe_name}"
 
-    # Save to MEDIA_ROOT/uploads/
     save_path = os.path.join('uploads', final_name)
     full_path = os.path.join(settings.MEDIA_ROOT, final_name)
     default_storage.save(final_name, ContentFile(uploaded_file.read()))
 
     return full_path, save_path
 
-
-pipe = GraphRAGPipeline()
-@api_view(["POST"])
-def ask(request):
-    q = request.data.get("query", "")
-    filters = request.data.get("filters")
-    res = pipe.ask(q)
-    import pdb; pdb.set_trace()
-    return Response({
-        "answer": res.answer,
-        "sources": res.sources,
-        "graph": res.graph,
-    })
-
 class WaiverDocumentListView(ListAPIView):
     queryset = WaiverDocument.objects.all().order_by('-uploaded_on')
     serializer_class = WaiverDocumentSerializer
-    pagination_class = None  # Optional: Add pagination if needed
+    pagination_class = None
 
 class FileUploadView(APIView):
     parser_classes = [MultiPartParser]
@@ -93,12 +122,6 @@ class FileUploadView(APIView):
         if not uploaded_file or uploaded_file.content_type != 'application/pdf':
             return Response({'error': 'Only PDF files are allowed'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Sanitize filename and add timestamp
-        safe_name = get_valid_filename(uploaded_file.name)
-        timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-        final_name = f"{timestamp}_{safe_name}"
-
-        # Save file to MEDIA_ROOT/uploads/
         full_path, relative_path = save_uploaded_file(uploaded_file)
 
         try:
@@ -106,8 +129,6 @@ class FileUploadView(APIView):
         except Exception as e:
             return Response({'error': f'Failed to extract metadata: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-
-        # Mapping of metadata keys to model fields
         model_fields_map = {
             "State": "state",
             "Program Title": "program_title",
@@ -118,10 +139,6 @@ class FileUploadView(APIView):
             "Application Number": "application_number"
         }
 
-        # Extract metadata from PDF
-        metadata = extract_waiver_info(full_path)
-
-        # Prepare model field values
         model_data = {
             "file_path": relative_path
         }
@@ -131,11 +148,9 @@ class FileUploadView(APIView):
             if value:
                 model_data[model_field] = value
 
-        # Extract year from proposed effective date if available
         if model_data.get("proposed_effective_date"):
             model_data["year"] = model_data["proposed_effective_date"].year
 
-        # Collect remaining metadata into 'extra'
         extra_data = {
             k: v for k, v in metadata.items()
             if k not in model_fields_map and v
@@ -143,10 +158,4 @@ class FileUploadView(APIView):
 
         model_data["extra"] = extra_data
 
-        # Create the WaiverDocument instance
-        # doc = WaiverDocument.objects.create(**model_data)
-
-        print(model_data)
-        # serializer = WaiverDocumentSerializer(doc)
-        # return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(model_data, status=status.HTTP_200_OK)

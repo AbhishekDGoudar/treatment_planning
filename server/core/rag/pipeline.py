@@ -74,7 +74,11 @@ class GraphRAGPipeline:
                     "WaiverApplication has index 'waiver_embeddings'.\n"
                     "IMPORTANT: If filtering by state, use 'WHERE toLower(s.name) CONTAINS ...'.\n"
                     "If concept search needed, use 'CALL db.index.vector.queryNodes(\"waiver_embeddings\", 10, $vector)'\n"
-                    "RETURN waiver_id, title, state, themes, score."
+                    # --- FIXED SECTION START ---
+                    "RETURN waiver_id, title, state, themes, score.\n"
+                    "CRITICAL SYNTAX RULE: Do NOT use 'variable.*' (e.g. 'w.*'). This causes a syntax error.\n"
+                    "If you need to return all properties, use map projection: 'variable { .* }'."
+                    # --- FIXED SECTION END ---
                 )
             ),
             PromptPiece(role="user", content=f"Question: {query}\nFilters: {filters}")
