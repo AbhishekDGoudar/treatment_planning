@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "multimodalrag"
 version = "0.1.0"
-description = "Django REST backend for multimodal RAG with Neo4j, MLX, and more"
+description = "Django REST backend for multimodal RAG with Neo4j and more"
 authors = [{ name = "Your Name" }]
 requires-python = ">=3.11"
 dependencies = [
