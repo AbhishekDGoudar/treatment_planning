@@ -1,0 +1,47 @@
+services:
+  # Backend
+  backend:
+    build: ./server
+    ports:
+      - "8000:8000"
+    environment:
+      - NEO4J_URI=bolt://neo4j-db:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=abhishek #your_secure_password
+      - AI_PROVIDER=OLLAMA
+      # Change OLLAMA_BASE_URL to http://host.docker.internal:11434 
+      # if using locally hosted Ollama outside Docker
+      - OLLAMA_BASE_URL=http://ollama:11434
+    depends_on:
+      - neo4j-db
+
+  # Frontend
+  frontend:
+    build: ./web
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  # Neo4j Database
+  neo4j-db:
+    image: neo4j:latest
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/abhishek #your_secure_password
+
+  # Dockerized Ollama (Optional)
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    # Uncomment below for GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]

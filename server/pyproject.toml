@@ -36,6 +36,7 @@ dependencies = [
     "langchain>=1.2.0",
     "langchain-core>=1.2.2",
     "langgraph>=1.0.5",
+    "torch>=2.9.1",
 ]
 
 [tool.setuptools.packages.find]

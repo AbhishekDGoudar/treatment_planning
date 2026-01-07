@@ -48,7 +48,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--folder",
             type=str,
-            default="../data/",
+            default="./data/",
             help="Folder to scan for PDFs (recursive)",
         )
 
