@@ -199,4 +199,8 @@ class Command(BaseCommand):
 
         # Save tracking
         track_path.write_text(json.dumps(indexed_data, indent=2))
-        self.stdout.write(self.style.SUCCESS("🚀 Ingestion Complete."))
+        self.stdout.write(self.style.SUCCESS("🚀 Ingestion Complete."))\
+        
+        # Comment this if you want to see the files
+        if os.path.exists(track_path):
+            os.remove(track_path)
