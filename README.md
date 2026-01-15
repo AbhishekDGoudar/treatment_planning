@@ -69,13 +69,37 @@ NEO4J_PASSWORD=yourpass
 
 ## 🛠️ App Setup
 ```
-python -m venv .venv && source .venv/bin/activate
 pip install -U pip
-pip install -e .
+pip install uv
+uv venv .venv
+source .venv/bin/activate
+uv sync
 streamlit run treatment_planning.py
 ```
 
 Open: http://localhost:8501
+
+## 🐳 Docker Setup
+### Install Docker
+- macOS: https://docs.docker.com/desktop/install/mac-install/
+- Windows: https://docs.docker.com/desktop/install/windows-install/
+- Linux: https://docs.docker.com/engine/install/
+
+### Run with Neo4j
+```
+docker compose up --build
+```
+
+Open:
+- App: http://localhost:8501
+- Neo4j: http://localhost:7474
+
+### Optional Ollama Service
+```
+docker compose --profile ollama up --build
+```
+
+If you run Ollama on the host instead, set `OLLAMA_BASE_URL=http://host.docker.internal:11434`.
 
 ## 📥 Ingest Documents
 Use the **Document Upload and Ingest** page inside Streamlit to load and index your corpus.

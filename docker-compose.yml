@@ -11,17 +11,17 @@ services:
       # Change OLLAMA_BASE_URL to http://host.docker.internal:11434
       # if using locally hosted Ollama outside Docker
       - OLLAMA_BASE_URL=http://ollama:11434
-      - DATA_DIR=/app/Data
+      - DATA_DIR=/app/data
       - UPLOADS_DIR=/app/uploads
       - LANCE_DB_PATH=/app/lancedb
       - SQLITE_PATH=/app/app.db
     volumes:
-      - ./Data:/app/Data
       - ./uploads:/app/uploads
       - ./lancedb:/app/lancedb
       - ./app.db:/app/app.db
     depends_on:
       - neo4j-db
+    restart: unless-stopped
 
   # Neo4j Database
   neo4j-db:
@@ -31,12 +31,17 @@ services:
       - "7687:7687"
     environment:
       - NEO4J_AUTH=neo4j/abhishek #your_secure_password
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    restart: unless-stopped
 
   # Dockerized Ollama (Optional)
   ollama:
     image: ollama/ollama:latest
     ports:
       - "11434:11434"
+    profiles: ["ollama"]
     # Uncomment below for GPU support
     # deploy:
     #   resources:
@@ -45,3 +50,7 @@ services:
     #         - driver: nvidia
     #           count: 1
     #           capabilities: [gpu]
+
+volumes:
+  neo4j_data:
+  neo4j_logs:

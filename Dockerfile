@@ -6,7 +6,11 @@ WORKDIR /app
 
 COPY . /app
 
-RUN pip install --upgrade pip && pip install -e .
+RUN pip install --upgrade pip && pip install uv
+ENV UV_PROJECT_ENVIRONMENT=/app/.venv
+RUN uv venv /app/.venv
+RUN uv sync --frozen
+ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8501
 
