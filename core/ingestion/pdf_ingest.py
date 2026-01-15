@@ -16,8 +16,8 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_openai import OpenAIEmbeddings
 
 from core import config
-from core.storage import clear_all, init_db, insert_chunk, insert_document
-from core.utils import extract_waiver_info, parse_effective_date
+from core.storage.sqlite_storage import clear_all, init_db, insert_chunk, insert_document
+from core.extraction.extraction_utils import extract_waiver_info, parse_effective_date
 
 
 class TimeoutException(Exception):

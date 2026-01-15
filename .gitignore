@@ -2,6 +2,7 @@ Data/
 uploads/
 lancedb/
 app.db
+tmp_uploads/
 
 # === Node.js / React (frontend) ===
 node_modules/

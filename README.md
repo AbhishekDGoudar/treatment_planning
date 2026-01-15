@@ -78,12 +78,39 @@ streamlit run streamlit_app.py
 Open: http://localhost:8501
 
 ## 📥 Ingest Documents
-Use the **Ingest PDFs** tab inside Streamlit to load and index your corpus.
+Use the **Document Upload and Ingest** page inside Streamlit to load and index your corpus.
 
 ## 🔎 Querying
-- Grounded answers  
-- Numbered citations  
-- GraphRAG over Neo4j  
+- Text RAG  
+- Graph RAG  
+- Thematic analysis  
+
+## 🗂️ Project Layout
+```
+streamlit_app.py
+pages/
+  1_Document_Upload_and_Ingest.py
+  2_Text_RAG.py
+  3_Graph_RAG.py
+  5_Thematic_Analysis.py
+core/
+  config.py
+  extraction/
+    extraction_utils.py
+  ingestion/
+    pdf_ingest.py
+    graph_ingest.py
+  rag/
+    generator.py
+    pipeline.py
+    retriever.py
+    text_retriever.py
+  storage/
+    graph_storage.py
+    sqlite_storage.py
+  ui/
+    sidebar.py
+```
 
 ## 🧩 Extensions
 - SigLIP image embeddings  
