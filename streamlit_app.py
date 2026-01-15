@@ -1,5 +1,6 @@
 import os
 
+import lancedb
 import streamlit as st
 
 from core import config
@@ -8,6 +9,7 @@ from core.ingestion.graph_ingest import ingest_statewise_kg
 from core.rag.generator import GeneratorFactory, PromptPiece
 from core.rag.pipeline import GraphRAGPipeline
 from core.rag.text_retriever import TextRetriever
+from core.storage import list_recent_documents
 
 
 st.set_page_config(page_title="Policy Analysis (Local)", layout="wide")
@@ -37,6 +39,10 @@ def configure_provider(
 
 
 def build_text_rag_answer(query: str, provider: str, k: int):
+    db = lancedb.connect(str(config.LANCE_DB_PATH))
+    if "policy_docs" not in db.table_names():
+        raise RuntimeError("LanceDB table 'policy_docs' not found. Run PDF ingestion first.")
+
     retriever = TextRetriever(provider)
     results = retriever.search(query, k=k)
 
@@ -132,6 +138,13 @@ with tab_ingest:
             except Exception as exc:
                 st.error(f"Ingestion failed: {exc}")
 
+    st.markdown("### Recent Documents")
+    recent_docs = list_recent_documents()
+    if recent_docs:
+        st.json(recent_docs)
+    else:
+        st.info("No documents found yet.")
+
 with tab_graph:
     st.subheader("Graph Ingestion")
     graph_file_path = st.text_input(
@@ -158,6 +171,9 @@ with tab_query:
         if not query.strip():
             st.warning("Enter a question to continue.")
         else:
+            if provider_choice == "OPENAI" and not openai_key:
+                st.warning("OpenAI selected but no API key provided.")
+                st.stop()
             if mode in ("Text RAG", "Hybrid"):
                 with st.spinner("Running Text RAG..."):
                     try:

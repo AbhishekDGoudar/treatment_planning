@@ -92,3 +92,28 @@ def insert_chunk(document_id: int, text: str, page: int, order_index: int) -> in
             (document_id, page, order_index, text),
         )
         return int(cursor.lastrowid)
+
+
+def list_recent_documents(limit: int = 25) -> list[dict]:
+    init_db()
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, stored_path, state, application_number, program_title, year
+            FROM documents
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return [
+        {
+            "id": r[0],
+            "stored_path": r[1],
+            "state": r[2],
+            "application_number": r[3],
+            "program_title": r[4],
+            "year": r[5],
+        }
+        for r in rows
+    ]
