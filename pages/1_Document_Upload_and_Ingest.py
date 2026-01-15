@@ -5,6 +5,8 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+import base64
+import pandas as pd
 import streamlit as st
 
 from core import config
@@ -123,16 +125,37 @@ if uploaded_file is not None:
 st.divider()
 st.subheader("Documents")
 
-page_size = st.selectbox("Page size", [5, 10, 20], index=1)
-total_docs = count_documents()
-total_pages = max((total_docs + page_size - 1) // page_size, 1)
-page = st.number_input("Page", min_value=1, max_value=total_pages, value=1)
-
 try:
-    docs = list_documents(page=page, page_size=page_size)
-    st.caption(f"Total documents: {total_docs}")
+    docs = list_documents(page=1, page_size=500)
     if docs:
-        st.json(docs)
+        df = pd.DataFrame(docs)
+        st.data_editor(
+            df,
+            use_container_width=True,
+            hide_index=True,
+            disabled=True,
+        )
+
+        st.markdown("### Preview Document")
+        doc_options = {d.get("doc_id"): d for d in docs if d.get("doc_id")}
+        selected_doc_id = st.selectbox("Select document", list(doc_options.keys()))
+
+        if st.button("Preview Selected Document"):
+            selected = doc_options.get(selected_doc_id)
+            stored_path = selected.get("stored_path") if selected else None
+            if not stored_path:
+                st.warning("No stored file path available for this document.")
+            else:
+                file_path = (config.BASE_DIR / stored_path).resolve()
+                if not file_path.exists():
+                    st.error(f"File not found: {file_path}")
+                else:
+                    pdf_bytes = file_path.read_bytes()
+                    b64_pdf = base64.b64encode(pdf_bytes).decode("ascii")
+                    st.markdown(
+                        f'<a href="data:application/pdf;base64,{b64_pdf}" target="_blank">Open PDF in new tab</a>',
+                        unsafe_allow_html=True,
+                    )
     else:
         st.info("No documents found yet.")
 except Exception as exc:

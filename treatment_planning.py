@@ -1,9 +1,9 @@
 import streamlit as st
 
 
-st.set_page_config(page_title="Policy Analysis (Local)", layout="wide")
+st.set_page_config(page_title="Policy Analysis", layout="wide")
 
-st.title("Policy Analysis & Extraction (Local)")
+st.title("Policy Analysis & Extraction")
 st.caption("Use the pages on the left to upload documents and run RAG workflows.")
 
 st.markdown(
@@ -14,7 +14,8 @@ st.markdown(
 - Graph RAG
 - Thematic Analysis
 
-### External Tools
-- Diff Checker: https://waiverdifferencecheck.streamlit.app/
+### Diff Checker
 """
 )
+
+st.link_button("Open Diff Checker", "https://waiverdifferencecheck.streamlit.app/")

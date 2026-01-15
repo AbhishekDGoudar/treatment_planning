@@ -10,4 +10,4 @@ RUN pip install --upgrade pip && pip install -e .
 
 EXPOSE 8501
 
-CMD ["streamlit", "run", "streamlit_app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+CMD ["streamlit", "run", "treatment_planning.py", "--server.address=0.0.0.0", "--server.port=8501"]

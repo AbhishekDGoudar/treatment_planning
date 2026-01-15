@@ -8,7 +8,6 @@ DATA_DIR = Path(os.getenv("DATA_DIR", BASE_DIR / "Data"))
 UPLOADS_DIR = Path(os.getenv("UPLOADS_DIR", BASE_DIR / "uploads"))
 LANCE_DB_PATH = Path(os.getenv("LANCE_DB_PATH", BASE_DIR / "lancedb"))
 SQLITE_PATH = Path(os.getenv("SQLITE_PATH", BASE_DIR / "app.db"))
-TMP_UPLOAD_DIR = Path(os.getenv("TMP_UPLOAD_DIR", BASE_DIR / "tmp_uploads"))
 
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")

@@ -72,7 +72,7 @@ NEO4J_PASSWORD=yourpass
 python -m venv .venv && source .venv/bin/activate
 pip install -U pip
 pip install -e .
-streamlit run streamlit_app.py
+streamlit run treatment_planning.py
 ```
 
 Open: http://localhost:8501
@@ -87,7 +87,7 @@ Use the **Document Upload and Ingest** page inside Streamlit to load and index y
 
 ## 🗂️ Project Layout
 ```
-streamlit_app.py
+treatment_planning.py
 pages/
   1_Document_Upload_and_Ingest.py
   2_Text_RAG.py
