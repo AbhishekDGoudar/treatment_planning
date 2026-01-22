@@ -27,9 +27,9 @@ def render_sidebar_settings():
             )
             st.success("Settings applied.")
 
-        st.divider()
-        st.subheader("Diff Checker")
-        st.markdown("[Open Diff Checker](https://waiverdifferencecheck.streamlit.app/)")
+        # st.divider()
+        # st.subheader("Diff Checker")
+        # st.markdown("[Open Diff Checker](https://waiverdifferencecheck.streamlit.app/)")
 
     configure_provider(
         provider_choice,

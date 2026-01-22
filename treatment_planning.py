@@ -12,10 +12,7 @@ st.markdown(
 - Document Upload and Ingest
 - Text RAG
 - Graph RAG
+- Waiver Difference Checker
 - Thematic Analysis
-
-### Diff Checker
 """
 )
-
-st.link_button("Open Diff Checker", "https://waiverdifferencecheck.streamlit.app/")
