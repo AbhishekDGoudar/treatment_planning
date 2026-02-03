@@ -1,13 +1,13 @@
-# Policy Analysis & Extraction Tool (Multimodal RAG)
+# Policy Analysis & Extraction Tool (RAG + GraphRAG)
 
-A local-first platform for **deep policy intelligence**, **multimodal retrieval**, and **autonomous thematic analysis**.
+A local-first platform for **deep policy intelligence**, **retrieval-augmented analysis**, and **graph reasoning**.
 
-This tool provides an end-to-end system for extracting, organizing, and analyzing complex policy documents. It combines multimodal LLM/VLM models, vector search, and graph reasoning to uncover relationships across large document corpora—all running locally on macOS, Linux, or Windows.
+This tool provides an end-to-end system for extracting, organizing, and analyzing complex policy documents. It combines LLMs, vector search, and graph reasoning to uncover relationships across large document corpora—all running locally on macOS, Linux, or Windows.
 
 ## 🚀 Core Capabilities
 
 ### 1. Information Extraction
-Automatically parse dense policy text and images (PDFs, scans, tables, charts) into:
+Automatically parse dense policy text (PDFs, scans, tables, charts) into:
 - entities  
 - claims   
 - themes  
@@ -29,21 +29,15 @@ Autonomous agents detect patterns across documents—funding, eligibility, compl
 
 | Layer                     | Technology                                   |
 |---------------------------|-----------------------------------------------|
-| LLM / VLM Inference       | MLX (Llama 3, Qwen2-VL, etc.)                |
-| Embeddings & Vector Search| FAISS                                        |
+| LLM Inference             | Ollama or OpenAI                             |
+| Embeddings & Vector Search| LanceDB                                      |
 | Knowledge Graph           | Neo4j                                        |
-| Backend                   | Django (Python)                              |
-| Frontend                  | React (Node.js)                              |
+| App UI                    | Streamlit (Python)                           |
 
 ## 📦 Prerequisites
 
-- **Python 3.10+**
-- **Node 18+**
+- **Python 3.11+**
 - **Neo4j** (Desktop, package manager, or Docker)
-- **Build tools**  
-  - macOS: Xcode Command Line Tools  
-  - Linux: build-essential  
-  - Windows: MSVC Build Tools or WSL2  
 
 ## 🗄️ Install Neo4j
 
@@ -66,59 +60,81 @@ Open Neo4j browser at: http://localhost:7474
 
 ## 🔐 Environment Configuration
 
-Create `server/.env`:
+Create `.env` (optional):
 ```
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
-NEO4J_PASS=yourpass
-
-MLX_TEXT_MODEL=mlx-community/Meta-Llama-3-8B-Instruct-4bit
-MLX_VLM_MODEL=mlx-community/Qwen2-VL-2B-4bit
+NEO4J_PASSWORD=yourpass
 ```
 
-## 🛠️ Backend Setup
+## 🛠️ App Setup
 ```
-cd server
-python -m venv .venv && source .venv/bin/activate
 pip install -U pip
-pip install -e .
-python manage.py migrate
-python manage.py runserver 0.0.0.0:8000
+pip install uv
+uv venv .venv
+source .venv/bin/activate
+uv sync
+streamlit run treatment_planning.py
 ```
 
-## 💻 Frontend Setup
+Open: http://localhost:8501
+
+## 🐳 Docker Setup
+### Install Docker
+- macOS: https://docs.docker.com/desktop/install/mac-install/
+- Windows: https://docs.docker.com/desktop/install/windows-install/
+- Linux: https://docs.docker.com/engine/install/
+
+### Run with Neo4j
 ```
-cd ../web
-npm install
-npm run dev
+docker compose up --build
 ```
 
-Open: http://localhost:5173
+Open:
+- App: http://localhost:8501
+- Neo4j: http://localhost:7474
+
+### Optional Ollama Service
+```
+docker compose --profile ollama up --build
+```
+
+If you run Ollama on the host instead, set `OLLAMA_BASE_URL=http://host.docker.internal:11434`.
 
 ## 📥 Ingest Documents
-```
-cd ../server
-python manage.py shell
-```
-
-```python
-from core.ingestion.loaders import load_path
-from core.ingestion.embeddings import index_corpus
-from core.ingestion.graph import Graph
-from core.models import WaiverDocument
-
-load_path("/path/to/your/corpus")
-index_corpus()
-
-G = Graph()
-for d in WaiverDocument.objects.all():
-    G.upsert_doc(d.path, d.year, d.group, d.state)
-```
+Use the **Document Upload and Ingest** page inside Streamlit to load and index your corpus.
 
 ## 🔎 Querying
-- Grounded answers  
-- Numbered citations  
-- Interactive knowledge graph  
+- Text RAG  
+- Graph RAG  
+- Thematic analysis  
+
+## 🗂️ Project Layout
+```
+treatment_planning.py
+pages/
+  1_Document_Upload_and_Ingest.py
+  2_Text_RAG.py
+  3_Graph_RAG.py
+  5_Thematic_Analysis.py
+core/
+  config.py
+  extraction/
+    extraction_utils.py
+  ingestion/
+    pdf_ingest.py
+    graph_ingest.py
+  rag/
+    generator.py
+    pipeline.py
+    retriever.py
+    text_retriever.py
+  storage/
+    graph_storage.py
+    sqlite_storage.py
+  ui/
+    sidebar.py
+```
 
 ## 🧩 Extensions
 - SigLIP image embeddings  

@@ -1,5 +1,8 @@
 Data/
-server/uploads/
+uploads/
+lancedb/
+app.db
+tmp_uploads/
 
 # === Node.js / React (frontend) ===
 node_modules/
@@ -20,7 +23,7 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 
-# === Django (backend) ===
+# === Python ===
 *.pyc
 __pycache__/
 db.sqlite3
