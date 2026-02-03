@@ -1,162 +1,121 @@
-import hashlib
-import json
-import re
-import shutil
-from datetime import datetime
-from pathlib import Path
-
-import base64
-import pandas as pd
 import streamlit as st
-
-from core import config
-from core.storage.graph_storage import count_documents, list_documents, upsert_document
-from core.ui.sidebar import render_sidebar_settings
-from core.extraction.extraction_utils import extract_waiver_info, parse_effective_date
-
-
-def _slugify(value: str) -> str:
-    value = value.strip().lower()
-    value = re.sub(r"[^a-z0-9]+", "-", value)
-    return value.strip("-") or "unknown"
-
-
-def _build_upload_path(state: str, waiver_number: str, approved_date, filename: str) -> Path:
-    ext = Path(filename).suffix or ".pdf"
-    state_folder = state or "unknown_state"
-    waiver_name = _slugify(waiver_number) if waiver_number else "unknown_waiver"
-    date_part = approved_date.strftime("%Y-%m-%d") if approved_date else "no_date"
-    new_filename = f"{waiver_name}_{date_part}{ext}".upper()
-    return config.UPLOADS_DIR / state_folder / new_filename
-
-
-def _hash_bytes(content: bytes) -> str:
-    return hashlib.md5(content).hexdigest()
-
-
-st.set_page_config(page_title="Document Upload and Ingest", layout="wide")
-st.title("Document Upload and Ingest")
-
-render_sidebar_settings()
-
-DEFAULT_ENTITY_MAP = {
-    "State": "state",
-    "Program Title": "program_title",
-    "Waiver Number": "waiver_number",
-    "Amendment Number": "amendment_number",
-    "Draft ID": "draft_id",
-    "Type of Request": "type_of_request",
-    "Requested Approval Period": "requested_approval_period",
-    "Type of Waiver": "type_of_waiver",
-    "Proposed Effective Date of Waiver being Amended": "proposed_effective_date",
-    "Approved Effective Date of Waiver being Amended": "amended_effective_date",
-    "Approved Effective Date": "approved_effective_date",
-    "PRA Disclosure Statement": "pra_disclosure_statement",
-}
-
-st.subheader("Upload a Single PDF")
-uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"], accept_multiple_files=False)
-
-entity_map_text = st.text_area(
-    "Entity map (JSON: extracted key -> Neo4j property)",
-    value=json.dumps(DEFAULT_ENTITY_MAP, indent=2),
-    height=200,
+import fitz
+import pandas as pd
+from datetime import datetime
+from core.extraction.extraction_utils import (
+    extract_waiver_info, 
+    extract_specific_sections, 
+    process_logic_flags, 
+    generate_doc_id,
+    SECTIONS_TO_EXTRACT
 )
+from core.storage.graph_storage import upsert_document 
 
-if uploaded_file is not None:
-    content = uploaded_file.getvalue()
-    doc_id = _hash_bytes(content)
-    config.UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-    tmp_path = config.UPLOADS_DIR / f"{doc_id}.pdf"
-    tmp_path.write_bytes(content)
+st.set_page_config(page_title="Waiver Multi-Ingest", layout="wide")
+st.title("📂 Multi-File Waiver Extraction & Ingest")
 
-    with st.spinner("Extracting metadata..."):
-        extracted = extract_waiver_info(str(tmp_path))
+if "processed_data" not in st.session_state:
+    st.session_state.processed_data = []
 
-    st.markdown("### Validate and Edit Metadata")
-    try:
-        entity_map = json.loads(entity_map_text)
-    except json.JSONDecodeError:
-        st.error("Entity map is not valid JSON.")
-        entity_map = DEFAULT_ENTITY_MAP
+# --- UPLOADER ---
+st.subheader("Ingest Documents")
+uploaded_files = st.file_uploader("Upload PDF waivers", type="pdf", accept_multiple_files=True)
 
-    edited = {}
-    with st.form("metadata_form"):
-        for src_key, dest_key in entity_map.items():
-            value = extracted.get(src_key, "")
-            edited[dest_key] = st.text_input(f"{src_key} → {dest_key}", value=value)
+col_btns_1, col_btns_2 = st.columns([1, 8])
+with col_btns_1:
+    process_btn = st.button("🚀 Process & Save")
+with col_btns_2:
+    if st.button("🗑️ Clear All"):
+        st.session_state.processed_data = []
+        st.rerun()
 
-        custom_notes = st.text_area("Notes (optional)")
-        submitted = st.form_submit_button("Save to Neo4j")
+# --- PIPELINE ---
+if process_btn:
+    if uploaded_files:
+        results = []
+        with st.spinner(f"Processing {len(uploaded_files)} files..."):
+            for uploaded_file in uploaded_files:
+                file_bytes = uploaded_file.read()
+                doc_id = generate_doc_id(file_bytes)
+                
+                doc = fitz.open(stream=file_bytes, filetype="pdf")
+                info = extract_waiver_info(doc)
+                sections = extract_specific_sections(doc, SECTIONS_TO_EXTRACT)
+                info.update(sections)
+                info = process_logic_flags(info)
+                info["File Name"] = uploaded_file.name
+                
+                # Neo4j Properties
+                props = {
+                    "doc_id": doc_id,
+                    "state": info.get("State"),
+                    "program_title": info.get("Program Title"),
+                    "waiver_number": info.get("Application Number"),
+                    "type_of_request": info.get("Application Type"),
+                    "filename": uploaded_file.name,
+                    "uploaded_at": datetime.utcnow().isoformat(),
+                    "service_plan_safeguards_flag": info.get("Service_Plan_Safeguards_Flag")
+                }
 
-    if submitted:
-        approved_date = parse_effective_date(edited.get("approved_effective_date", "") or "")
-        stored_path = _build_upload_path(
-            edited.get("state", ""),
-            edited.get("waiver_number", ""),
-            approved_date,
-            uploaded_file.name,
-        )
-        stored_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(tmp_path), stored_path)
+                try:
+                    upsert_document(doc_id, props)
+                except Exception as e:
+                    st.error(f"Save Error: {e}")
 
-        extra = {
-            k: v for k, v in extracted.items() if k not in entity_map
-        }
-
-        props = dict(edited)
-        props.update(
-            {
-                "doc_id": doc_id,
-                "filename": uploaded_file.name,
-                "stored_path": str(stored_path.relative_to(config.BASE_DIR)),
-                "uploaded_at": datetime.utcnow().isoformat(),
-                "notes": custom_notes,
-                "extra_json": json.dumps(extra),
-            }
-        )
-
-        try:
-            upsert_document(doc_id, props)
-            st.success("Saved to Neo4j.")
-        except Exception as exc:
-            st.error(f"Failed to save to Neo4j: {exc}")
+                results.append(info)
+                doc.close()
+                
+            st.session_state.processed_data = results
+            st.success('''Extraction Completed !
+                          Results saved !''')
 
 st.divider()
-st.subheader("Documents")
 
-try:
-    docs = list_documents(page=1, page_size=500)
-    if docs:
-        df = pd.DataFrame(docs)
-        st.data_editor(
-            df,
-            use_container_width=True,
-            hide_index=True,
-            disabled=True,
-        )
+# --- FULL PREVIEW TABLE ---
+if st.session_state.processed_data:
+    df = pd.DataFrame(st.session_state.processed_data)
+    
+    # All extracted columns shown here
+    final_column_order = [
+        "File Name", "Application Number", "State", "Program Title", 
+        "Proposed Effective Date", "Approved Effective Date", 
+        "Approved Effective Date of Waiver being Amended", "Application Type", 
+        "B_1_b_Additional_Criteria", "Transition of Individuals Affected by Maximum Age Limitation", 
+        "B_1_c_Transition_Plan", "Criminal History and/or Background Investigations", 
+        "C_2_a_Criminal_History", "Service_Plan_Safeguards_Flag", "D_1_b_Service_Plan_Safeguards"
+    ]
+    df = df[[col for col in final_column_order if col in df.columns]]
 
-        st.markdown("### Preview Document")
-        doc_options = {d.get("doc_id"): d for d in docs if d.get("doc_id")}
-        selected_doc_id = st.selectbox("Select document", list(doc_options.keys()))
+    st.subheader("Global Extraction Table")
+    st.dataframe(df, use_container_width=True)
+    
+    csv = df.to_csv(index=False).encode('utf-8-sig')
+    st.download_button("📥 Download Full CSV", data=csv, file_name="waiver_full_data.csv")
 
-        if st.button("Preview Selected Document"):
-            selected = doc_options.get(selected_doc_id)
-            stored_path = selected.get("stored_path") if selected else None
-            if not stored_path:
-                st.warning("No stored file path available for this document.")
-            else:
-                file_path = (config.BASE_DIR / stored_path).resolve()
-                if not file_path.exists():
-                    st.error(f"File not found: {file_path}")
-                else:
-                    pdf_bytes = file_path.read_bytes()
-                    b64_pdf = base64.b64encode(pdf_bytes).decode("ascii")
-                    st.markdown(
-                        f'<a href="data:application/pdf;base64,{b64_pdf}" target="_blank">Open PDF in new tab</a>',
-                        unsafe_allow_html=True,
-                    )
-    else:
-        st.info("No documents found yet.")
-except Exception as exc:
-    st.error(f"Failed to load documents: {exc}")
+    st.divider()
+
+    # --- UPDATED SIDE-BY-SIDE REVIEW ---
+    st.subheader("Detailed Review")
+    selected_filename = st.selectbox("Select file to inspect:", df["File Name"].tolist())
+    
+    if selected_filename:
+        selected_row = next(item for item in st.session_state.processed_data if item["File Name"] == selected_filename)
+        left, right = st.columns([1, 2])
+        
+        with left:
+            st.markdown("#### Metadata Verification")
+            st.write(f"**State:** {selected_row.get('State')}")
+            st.write(f"**Application Number:** {selected_row.get('Application Number')}")
+            st.write(f"**Program Title:** {selected_row.get('Program Title')}")
+            st.write(f"**App Type:** {selected_row.get('Application Type')}")
+            
+            st.info(f"**Service Plan Safeguards:** {selected_row.get('Service_Plan_Safeguards_Flag')}")
+            st.info(f"**Criminal Check:** {selected_row.get('Criminal History and/or Background Investigations')}")
+            st.info(f"**Transition:** {selected_row.get('Transition of Individuals Affected by Maximum Age Limitation')}")
+
+        with right:
+            st.markdown("#### Section Content")
+            sec = st.radio("Section:", options=list(SECTIONS_TO_EXTRACT.keys()), horizontal=True)
+            st.text_area(label=sec, value=selected_row.get(sec, ""), height=400)
+else:
+    st.info("No data processed.")
