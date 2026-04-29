@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
+from langchain_anthropic import ChatAnthropic
 
 from core import config
 
@@ -12,15 +13,21 @@ class PromptPiece:
 
 class GeneratorFactory:
     def __init__(self):
-        if config.AI_PROVIDER.upper() == "OPENAI":
+        provider = config.AI_PROVIDER.upper()
+        if provider == "OPENAI":
             self.llm = ChatOpenAI(
                 model=config.OPENAI_LLM_MODEL,
-                temperature=0
+                temperature=0,
+            )
+        elif provider == "ANTHROPIC":
+            self.llm = ChatAnthropic(
+                model=config.ANTHROPIC_LLM_MODEL,
+                temperature=0,
             )
         else:
             self.llm = ChatOllama(
                 model=config.OLLAMA_LLM_MODEL,
-                temperature=0
+                temperature=0,
             )
 
     def generate(self, pieces: list[PromptPiece]) -> str:
