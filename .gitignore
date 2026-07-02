@@ -98,3 +98,6 @@ docker-compose.override.yml
 
 # Models
 /models
+
+# Knowledge files
+knowledge_base/

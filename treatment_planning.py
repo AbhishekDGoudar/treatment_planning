@@ -13,6 +13,8 @@ st.markdown(
 - Text RAG
 - Graph RAG
 - Waiver Difference Checker
-- Thematic Analysis
+- Text Classification
+- Claude Classification
+- Knowledge based Claude Classification
 """
 )
